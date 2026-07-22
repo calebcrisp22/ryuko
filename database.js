@@ -215,27 +215,86 @@ function resetJoins() {
 
 // Parse account line format:
 // email:pass|username|level|items|2fa|banned|renown|credits|platforms|lastplayed|ranks|wanteditems
+function safeParseInt(value, fieldName) {
+  const trimmed = (value ?? '').toString().trim();
+  const parsed = parseInt(trimmed, 10);
+  if (trimmed !== '' && Number.isNaN(parsed)) {
+    console.warn(`[parseAccountLine] Failed to parse integer for field "${fieldName}": "${value}" — defaulting to 0.`);
+    return 0;
+  }
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 function parseAccountLine(line, category) {
-  const [cred, username, level, items, twofa, banned, renown, credits, platforms, last_played, wanted_ranks, wanted_items] = line.split('|');
-  if (!cred || !cred.includes(':')) return null;
-  const [email, ...passParts] = cred.split(':');
-  const password = passParts.join(':');
-  return {
+  if (!line || typeof line !== 'string') {
+    console.warn('[parseAccountLine] Empty or invalid line received.');
+    return null;
+  }
+
+  const trimmedLine = line.trim();
+
+  // Must contain the email:password prefix before any '|' delimited fields.
+  const firstPipeIndex = trimmedLine.indexOf('|');
+  const credPart = firstPipeIndex === -1 ? trimmedLine : trimmedLine.slice(0, firstPipeIndex);
+
+  if (!credPart.includes(':')) {
+    console.warn(`[parseAccountLine] Line missing "email:password" prefix: "${trimmedLine}"`);
+    return null;
+  }
+
+  const fields = trimmedLine.split('|').map(f => f.trim());
+
+  const [
+    cred,
+    username,
+    level,
+    items,
+    twofa,
+    banned,
+    renown,
+    credits,
+    platforms,
+    last_played,
+    wanted_ranks,
+    wanted_items,
+  ] = fields;
+
+  if (!cred || !cred.includes(':')) {
+    console.warn(`[parseAccountLine] Invalid credentials segment: "${cred}"`);
+    return null;
+  }
+
+  // Split email:password on the FIRST colon only, joining the rest back
+  // together in case the password itself contains colons.
+  const colonIndex = cred.indexOf(':');
+  const email = cred.slice(0, colonIndex).trim();
+  const password = cred.slice(colonIndex + 1).trim();
+
+  if (!email || !password) {
+    console.warn(`[parseAccountLine] Missing email or password after split: email="${email}" password="${password}"`);
+    return null;
+  }
+
+  const parsed = {
     category,
-    email: email.trim(),
-    password: password.trim(),
+    email,
+    password,
     username: username?.trim() || 'Unknown',
-    level: parseInt(level) || 0,
-    items: parseInt(items) || 0,
+    level: safeParseInt(level, 'level'),
+    items: safeParseInt(items, 'items'),
     twofa: twofa?.trim() || 'Unknown',
     banned: banned?.trim() || 'No',
-    renown: parseInt(renown) || 0,
-    credits: parseInt(credits) || 0,
+    renown: safeParseInt(renown, 'renown'),
+    credits: safeParseInt(credits, 'credits'),
     platforms: platforms?.trim() || 'Unknown',
     last_played: last_played?.trim() || 'Unknown',
     wanted_ranks: wanted_ranks?.trim() || 'None',
     wanted_items: wanted_items?.trim() || 'None',
   };
+
+  console.log(`[parseAccountLine] Parsed account: ${JSON.stringify({ ...parsed, password: '***' })}`);
+
+  return parsed;
 }
 
 module.exports = {
