@@ -1,0 +1,15 @@
+{
+  "name": "generator-bot",
+  "version": "1.0.0",
+  "description": "Discord R6 account generator bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "node deploy.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "better-sqlite3": "^9.6.0",
+    "dotenv": "^16.4.5"
+  }
+}
