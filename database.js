@@ -225,6 +225,40 @@ function safeParseInt(value, fieldName) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+// Maps lower-cased key labels (as seen in "Key: Value" segments) to the
+// corresponding database field name.
+const KEY_VALUE_FIELD_MAP = {
+  'username': 'username',
+  'level': 'level',
+  'credits': 'credits',
+  'renown': 'renown',
+  'total items': 'items',
+  'items': 'items',
+  '2fa': 'twofa',
+  'banned': 'banned',
+  'platforms': 'platforms',
+  'wanted ranks': 'wanted_ranks',
+  'ranks': 'wanted_ranks',
+  'wanted items': 'wanted_items',
+  'last played': 'last_played',
+};
+
+const DEFAULT_FIELDS = {
+  username: 'Unknown',
+  level: 0,
+  items: 0,
+  twofa: 'Unknown',
+  banned: 'No',
+  renown: 0,
+  credits: 0,
+  platforms: 'Unknown',
+  last_played: 'Unknown',
+  wanted_ranks: 'None',
+  wanted_items: 'None',
+};
+
+const NUMERIC_FIELDS = new Set(['level', 'items', 'renown', 'credits']);
+
 function parseAccountLine(line, category) {
   if (!line || typeof line !== 'string') {
     console.warn('[parseAccountLine] Empty or invalid line received.');
@@ -243,21 +277,7 @@ function parseAccountLine(line, category) {
   }
 
   const fields = trimmedLine.split('|').map(f => f.trim());
-
-  const [
-    cred,
-    username,
-    level,
-    items,
-    twofa,
-    banned,
-    renown,
-    credits,
-    platforms,
-    last_played,
-    wanted_ranks,
-    wanted_items,
-  ] = fields;
+  const [cred, ...restFields] = fields;
 
   if (!cred || !cred.includes(':')) {
     console.warn(`[parseAccountLine] Invalid credentials segment: "${cred}"`);
@@ -275,21 +295,73 @@ function parseAccountLine(line, category) {
     return null;
   }
 
+  // Detect key-value format: any remaining segment containing "Key: Value"
+  // (a colon followed by a space) indicates the labeled format rather than
+  // the plain positional format.
+  const isKeyValueFormat = restFields.some(segment => /:\s/.test(segment));
+
+  const values = { ...DEFAULT_FIELDS };
+
+  if (isKeyValueFormat) {
+    const parsedPairs = {};
+
+    for (const segment of restFields) {
+      if (!segment) continue;
+
+      const sepIndex = segment.indexOf(':');
+      if (sepIndex === -1) continue;
+
+      const rawKey = segment.slice(0, sepIndex).trim();
+      const rawValue = segment.slice(sepIndex + 1).trim();
+      const normalizedKey = rawKey.toLowerCase();
+
+      const field = KEY_VALUE_FIELD_MAP[normalizedKey];
+      if (!field) {
+        console.warn(`[parseAccountLine] Unrecognized key "${rawKey}" — skipping.`);
+        continue;
+      }
+
+      parsedPairs[rawKey] = rawValue;
+
+      values[field] = NUMERIC_FIELDS.has(field)
+        ? safeParseInt(rawValue, field)
+        : (rawValue || DEFAULT_FIELDS[field]);
+    }
+
+    console.log(`[parseAccountLine] Parsed key-value pairs: ${JSON.stringify(parsedPairs)}`);
+  } else {
+    const [
+      username,
+      level,
+      items,
+      twofa,
+      banned,
+      renown,
+      credits,
+      platforms,
+      last_played,
+      wanted_ranks,
+      wanted_items,
+    ] = restFields;
+
+    values.username = username?.trim() || DEFAULT_FIELDS.username;
+    values.level = safeParseInt(level, 'level');
+    values.items = safeParseInt(items, 'items');
+    values.twofa = twofa?.trim() || DEFAULT_FIELDS.twofa;
+    values.banned = banned?.trim() || DEFAULT_FIELDS.banned;
+    values.renown = safeParseInt(renown, 'renown');
+    values.credits = safeParseInt(credits, 'credits');
+    values.platforms = platforms?.trim() || DEFAULT_FIELDS.platforms;
+    values.last_played = last_played?.trim() || DEFAULT_FIELDS.last_played;
+    values.wanted_ranks = wanted_ranks?.trim() || DEFAULT_FIELDS.wanted_ranks;
+    values.wanted_items = wanted_items?.trim() || DEFAULT_FIELDS.wanted_items;
+  }
+
   const parsed = {
     category,
     email,
     password,
-    username: username?.trim() || 'Unknown',
-    level: safeParseInt(level, 'level'),
-    items: safeParseInt(items, 'items'),
-    twofa: twofa?.trim() || 'Unknown',
-    banned: banned?.trim() || 'No',
-    renown: safeParseInt(renown, 'renown'),
-    credits: safeParseInt(credits, 'credits'),
-    platforms: platforms?.trim() || 'Unknown',
-    last_played: last_played?.trim() || 'Unknown',
-    wanted_ranks: wanted_ranks?.trim() || 'None',
-    wanted_items: wanted_items?.trim() || 'None',
+    ...values,
   };
 
   console.log(`[parseAccountLine] Parsed account: ${JSON.stringify({ ...parsed, password: '***' })}`);
