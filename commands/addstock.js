@@ -23,15 +23,61 @@ module.exports = {
     .addStringOption(opt =>
       opt.setName('accounts')
         .setDescription('Accounts format: email:pass|user|level|items|2fa|banned|renown|credits|platforms|lastplayed|ranks')
-        .setRequired(true)
+        .setRequired(false)
+    )
+    .addAttachmentOption(opt =>
+      opt.setName('file')
+        .setDescription('A .txt or .csv file containing accounts, one per line')
+        .setRequired(false)
     ),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
 
-    const category = interaction.options.getString('category');
-    const raw      = interaction.options.getString('accounts');
-    const lines    = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    const category   = interaction.options.getString('category');
+    const raw        = interaction.options.getString('accounts');
+    const attachment = interaction.options.getAttachment('file');
+
+    if (!raw && !attachment) {
+      return interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(COLORS.ERROR)
+            .setDescription('❌ You must provide either the `accounts` text option or a `file` attachment.'),
+        ],
+      });
+    }
+
+    let content = raw;
+
+    if (attachment) {
+      const name = attachment.name || '';
+      if (!name.toLowerCase().endsWith('.txt') && !name.toLowerCase().endsWith('.csv')) {
+        return interaction.editReply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(COLORS.ERROR)
+              .setDescription('❌ Only `.txt` or `.csv` files are supported.'),
+          ],
+        });
+      }
+
+      try {
+        const res = await fetch(attachment.url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        content = await res.text();
+      } catch (err) {
+        return interaction.editReply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(COLORS.ERROR)
+              .setDescription('❌ Failed to download or read the attached file.'),
+          ],
+        });
+      }
+    }
+
+    const lines = (content || '').split('\n').map(l => l.trim()).filter(Boolean);
 
     const valid   = [];
     const invalid = [];
