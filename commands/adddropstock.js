@@ -9,7 +9,7 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addStringOption(opt =>
       opt.setName('accounts')
-        .setDescription('Accounts one per line: email:pass|username|level|items|2fa|banned|renown|credits|platforms|lastplayed|ranks|wanteditems')
+        .setDescription('Accounts format: email:pass|user|level|items|2fa|banned|renown|credits|platforms|lastplayed|ranks')
         .setRequired(true)
     ),
 
