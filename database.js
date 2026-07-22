@@ -87,6 +87,7 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('footer_premium', 'GENERATOR💎');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('how_to_link', 'Go to https://www.ubisoft.com/en-us/help and link your account using the provided credentials.');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('bot_name', 'Generator');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('banner_image', NULL);
 `);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -98,6 +99,14 @@ function getSetting(key) {
 
 function setSetting(key, value) {
   db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, value);
+}
+
+function setImageUrl(url) {
+  setSetting('banner_image', url);
+}
+
+function getImageUrl() {
+  return getSetting('banner_image');
 }
 
 function getFreeStock() {
@@ -231,6 +240,7 @@ function parseAccountLine(line, category) {
 
 module.exports = {
   db, getSetting, setSetting,
+  setImageUrl, getImageUrl,
   getFreeStock, getPremiumStock, getDropStock,
   claimAccount, confirmClaim, claimDropAccount,
   addAccounts, addDropAccounts,
