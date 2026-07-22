@@ -25,13 +25,8 @@ module.exports = {
   async execute(interaction, client) {
     await interaction.deferReply();
 
-    await interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor(COLORS.GEN)
-          .setDescription('🤔 Generator is thinking...'),
-      ],
-    });
+    const channel = interaction.channel;
+    await channel.sendTyping();
 
     const category = interaction.options.getString('category');
     const userId   = interaction.user.id;
@@ -70,9 +65,15 @@ module.exports = {
       await interaction.user.send('⏳ Adding account to API...');
     } catch {}
 
+    // Keep showing Discord's native typing indicator while we process
+    const typingInterval = setInterval(() => {
+      channel.sendTyping().catch(() => {});
+    }, 5000);
+
     // Claim account
     const acc = claimAccount(category);
     if (!acc) {
+      clearInterval(typingInterval);
       return interaction.editReply({
         embeds: [
           new EmbedBuilder()
@@ -88,6 +89,8 @@ module.exports = {
 
     // Simulate processing time before revealing account details
     await new Promise(resolve => setTimeout(resolve, 10000));
+
+    clearInterval(typingInterval);
 
     try {
       await interaction.user.send({
