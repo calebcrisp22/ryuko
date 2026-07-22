@@ -97,10 +97,27 @@ module.exports = {
     const credsB64   = Buffer.from(creds).toString('base64');
     const dmImageUrl = getSetting(`gen_image_${category}`) || null;
 
-    const dmEmbed = new EmbedBuilder()
-      .setColor(COLORS.DM)
-      .setTitle(`Generated Account — ${acc.username}`)
-      .setDescription(
+    console.log(`[generate] category="${category}" raw dmImageUrl setting:`, dmImageUrl);
+
+    let dmImageValid = false;
+    if (dmImageUrl) {
+      try {
+        // Basic sanity check that the URL is well-formed before using it
+        new URL(dmImageUrl);
+        dmImageValid = true;
+      } catch (err) {
+        console.error(`[generate] Skipping invalid gen image URL for "${category}":`, err.message);
+      }
+    }
+    console.log(`[generate] dmImageValid=${dmImageValid}`);
+
+    // Build the embed data as a plain object first so the image is part of
+    // the payload from the start, rather than relying on a chained
+    // setImage() call (which can be flaky in some discord.js contexts).
+    const dmEmbedData = {
+      color: COLORS.DM,
+      title: `Generated Account — ${acc.username}`,
+      description:
         `**Username** ➡️ ${acc.username}\n` +
         `**Level** ➡️ ${acc.level}\n` +
         `**Items** ➡️ ${acc.items}\n` +
@@ -112,20 +129,25 @@ module.exports = {
         `**Last Played** ➡️ ${acc.last_played}\n` +
         `**Wanted Ranks** ➡️ ${acc.wanted_ranks}\n` +
         `**Wanted Items** ➡️ ${acc.wanted_items}\n\n` +
-        `🔑 **Login Credentials**\n\`\`\`${creds}\`\`\``
-      )
-      .setFooter({ text: `${botName} • Do NOT share your credentials with anyone` })
-      .setTimestamp();
+        `🔑 **Login Credentials**\n\`\`\`${creds}\`\`\``,
+      footer: { text: `${botName} • Do NOT share your credentials with anyone` },
+      timestamp: new Date().toISOString(),
+    };
 
-    if (dmImageUrl) {
-      try {
-        // Basic sanity check that the URL is well-formed before using it
-        new URL(dmImageUrl);
-        dmEmbed.setImage(dmImageUrl);
-      } catch (err) {
-        console.error(`[generate] Skipping invalid gen image URL for "${category}":`, err.message);
-      }
+    if (dmImageValid) {
+      dmEmbedData.image = { url: dmImageUrl };
     }
+
+    let dmEmbed = new EmbedBuilder(dmEmbedData);
+
+    // Fallback: if for some reason the image field didn't stick, rebuild via
+    // toJSON() + a fresh EmbedBuilder and explicitly call setImage().
+    if (dmImageValid && !dmEmbed.toJSON().image) {
+      console.warn('[generate] dmEmbed.image missing after construction, retrying with setImage()');
+      dmEmbed = new EmbedBuilder(dmEmbed.toJSON()).setImage(dmImageUrl);
+    }
+
+    console.log('[generate] dmEmbed setImage successful:', Boolean(dmEmbed.toJSON().image));
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -143,35 +165,55 @@ module.exports = {
     let dmSent = true;
     try {
       await interaction.user.send({ embeds: [dmEmbed], components: [row] });
-    } catch {
+      console.log(`[generate] DM sent successfully to user ${userId}`);
+    } catch (err) {
       dmSent = false;
+      console.error(`[generate] Failed to DM user ${userId}:`, err?.message || err);
     }
 
     // ── Announcement in gen channel ─────────────────────────────────────────
     const genChannelId = getSetting('gen_channel');
+    console.log('[generate] genChannelId setting:', genChannelId);
 
     if (genChannelId) {
       const genChannel = interaction.guild?.channels.cache.get(genChannelId);
+      console.log('[generate] genChannel found:', Boolean(genChannel), genChannel?.id);
+
       if (genChannel?.isTextBased()) {
         const footerText = getSetting('footer_text') || `${botName} • Do NOT share your credentials with anyone`;
 
-        const announceEmbed = new EmbedBuilder()
-          .setColor(COLORS.GEN)
-          .setDescription(`🎮 **${interaction.user.username}** generated a account!`)
-          .setFooter({ text: footerText })
-          .setTimestamp();
+        const announceEmbedData = {
+          color: COLORS.GEN,
+          description: `🎮 **${interaction.user.username}** generated a account!`,
+          footer: { text: footerText },
+          timestamp: new Date().toISOString(),
+        };
 
-        if (dmImageUrl) {
-          try {
-            new URL(dmImageUrl);
-            announceEmbed.setImage(dmImageUrl);
-          } catch (err) {
-            console.error(`[generate] Skipping invalid gen image URL for "${category}":`, err.message);
-          }
+        if (dmImageValid) {
+          announceEmbedData.image = { url: dmImageUrl };
         }
 
-        await genChannel.send({ embeds: [announceEmbed] }).catch(() => {});
+        let announceEmbed = new EmbedBuilder(announceEmbedData);
+
+        if (dmImageValid && !announceEmbed.toJSON().image) {
+          console.warn('[generate] announceEmbed.image missing after construction, retrying with setImage()');
+          announceEmbed = new EmbedBuilder(announceEmbed.toJSON()).setImage(dmImageUrl);
+        }
+
+        console.log('[generate] announceEmbed has image set:', Boolean(announceEmbed.toJSON().image));
+        console.log('[generate] announceEmbed payload:', JSON.stringify(announceEmbed.toJSON()));
+
+        try {
+          const sentMsg = await genChannel.send({ embeds: [announceEmbed] });
+          console.log(`[generate] Announcement sent to gen channel ${genChannel.id}, message id: ${sentMsg?.id}`);
+        } catch (err) {
+          console.error(`[generate] Failed to send announcement to gen channel ${genChannel.id}:`, err?.message || err);
+        }
+      } else {
+        console.warn(`[generate] gen_channel "${genChannelId}" is not a valid text-based channel in this guild`);
       }
+    } else {
+      console.warn('[generate] No gen_channel setting configured; skipping announcement');
     }
 
     // Reply to user
