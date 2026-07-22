@@ -23,7 +23,15 @@ module.exports = {
     ),
 
   async execute(interaction, client) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply();
+
+    await interaction.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.GEN)
+          .setDescription('🤔 Generator is thinking...'),
+      ],
+    });
 
     const category = interaction.options.getString('category');
     const userId   = interaction.user.id;
@@ -58,6 +66,14 @@ module.exports = {
       }
     }
 
+    await interaction.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.GEN)
+          .setDescription('⏳ Adding account to API...'),
+      ],
+    });
+
     // Claim account
     const acc = claimAccount(category);
     if (!acc) {
@@ -73,6 +89,17 @@ module.exports = {
     // Confirm claim & set cooldown
     confirmClaim(acc.id, userId);
     setCooldown(userId, category);
+
+    // Simulate processing time before revealing account details
+    await new Promise(resolve => setTimeout(resolve, 10000));
+
+    await interaction.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLORS.GEN)
+          .setDescription("✅ Here's your account details"),
+      ],
+    });
 
     // ── Public embed in gen channel ─────────────────────────────────────────
     const genChannelId = getSetting('gen_channel');
