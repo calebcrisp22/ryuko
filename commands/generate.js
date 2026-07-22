@@ -67,13 +67,7 @@ module.exports = {
     }
 
     try {
-      await interaction.user.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(COLORS.GEN)
-            .setDescription('⏳ Adding account to API...'),
-        ],
-      });
+      await interaction.user.send('⏳ Adding account to API...');
     } catch {}
 
     // Claim account
@@ -111,7 +105,7 @@ module.exports = {
     if (genChannelId) {
       const genChannel = interaction.guild?.channels.cache.get(genChannelId);
       if (genChannel?.isTextBased()) {
-        await genChannel.send('⏳ Generating...').catch(() => {});
+        await genChannel.send('⏳ Generating `●●●`').catch(() => {});
       }
     }
 
