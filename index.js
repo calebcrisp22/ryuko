@@ -3,11 +3,14 @@ require('dotenv').config();
 const {
   Client, GatewayIntentBits, Collection, Events,
   ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder,
+  REST, Routes,
 } = require('discord.js');
 
 const fs   = require('fs');
 const path = require('path');
-const { TOKEN, OWNER_ID, COLORS } = require('./config');
+const { TOKEN, CLIENT_ID, OWNER_ID, COLORS } = require('./config');
+
+const GUILD_ID = process.env.GUILD_ID;
 const {
   getSetting, confirmClaim, incrementJoins, getSubscription, isPremium,
 } = require('./database');
@@ -39,9 +42,24 @@ if (fs.existsSync(commandsPath)) {
   }
 }
 
-client.once(Events.ClientReady, (c) => {
+client.once(Events.ClientReady, async (c) => {
   console.log(`✅ Logged in as ${c.user.tag}`);
   c.user.setActivity('/generate', { type: 3 }); // Watching
+
+  // ── Auto-deploy slash commands so they always stay in sync with Discord ──
+  if (!CLIENT_ID || !GUILD_ID) {
+    console.warn('⚠️  Skipping command auto-deploy: missing CLIENT_ID or GUILD_ID in .env');
+  } else {
+    try {
+      const commands = client.commands.map(cmd => cmd.data.toJSON());
+      const rest = new REST().setToken(TOKEN);
+      console.log(`🔄 Auto-deploying ${commands.length} slash commands to guild ${GUILD_ID}...`);
+      await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
+      console.log(`✅ Successfully deployed ${commands.length} commands to guild ${GUILD_ID}!`);
+    } catch (err) {
+      console.error('❌ Auto-deploy of commands failed:', err);
+    }
+  }
 });
 
 // Track joins

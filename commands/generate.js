@@ -92,16 +92,6 @@ module.exports = {
 
     clearInterval(typingInterval);
 
-    try {
-      await interaction.user.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(COLORS.GEN)
-            .setDescription("✅ Here's your account details"),
-        ],
-      });
-    } catch {}
-
     // ── Simple loading indicator in gen channel ─────────────────────────────
     const genChannelId = getSetting('gen_channel');
 
