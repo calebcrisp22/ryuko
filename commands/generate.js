@@ -137,7 +137,15 @@ module.exports = {
       .setFooter({ text: `${botName} • Do NOT share your credentials with anyone` })
       .setTimestamp();
 
-    if (dmImageUrl) dmEmbed.setImage(dmImageUrl);
+    if (dmImageUrl) {
+      try {
+        // Basic sanity check that the URL is well-formed before using it
+        new URL(dmImageUrl);
+        dmEmbed.setImage(dmImageUrl);
+      } catch (err) {
+        console.error(`[generate] Skipping invalid gen image URL for "${category}":`, err.message);
+      }
+    }
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
