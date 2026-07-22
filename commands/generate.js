@@ -32,6 +32,30 @@ module.exports = {
     const userId   = interaction.user.id;
     const botName  = getSetting('bot_name') || 'Generator';
 
+    // Role requirement gate
+    const freeRole    = getSetting('free_role');
+    const premiumRole = getSetting('premium_role');
+
+    if (category === 'free' && freeRole && !interaction.member.roles.cache.has(freeRole)) {
+      return interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(COLORS.ERROR)
+            .setDescription(`❌ You need <@&${freeRole}> to use free accounts.`),
+        ],
+      });
+    }
+
+    if (category === 'premium' && premiumRole && !interaction.member.roles.cache.has(premiumRole)) {
+      return interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(COLORS.ERROR)
+            .setDescription(`❌ You need <@&${premiumRole}> to use premium accounts.`),
+        ],
+      });
+    }
+
     // Premium gate
     if (category === 'premium' && !isPremium(userId)) {
       return interaction.editReply({
