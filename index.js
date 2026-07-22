@@ -25,10 +25,17 @@ client.commands = new Collection();
 
 // Load commands
 const commandsPath = path.join(__dirname, 'commands');
-for (const file of fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'))) {
-  const command = require(path.join(commandsPath, file));
-  if (command.data && command.execute) {
-    client.commands.set(command.data.name, command);
+if (!fs.existsSync(commandsPath)) {
+  console.warn(`⚠️  Commands directory not found at ${commandsPath}, creating it.`);
+  fs.mkdirSync(commandsPath, { recursive: true });
+}
+
+if (fs.existsSync(commandsPath)) {
+  for (const file of fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'))) {
+    const command = require(path.join(commandsPath, file));
+    if (command.data && command.execute) {
+      client.commands.set(command.data.name, command);
+    }
   }
 }
 
