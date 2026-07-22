@@ -105,23 +105,13 @@ module.exports = {
       });
     } catch {}
 
-    // ── Public embed in gen channel ─────────────────────────────────────────
+    // ── Simple loading indicator in gen channel ─────────────────────────────
     const genChannelId = getSetting('gen_channel');
-    const imageUrl     = getSetting(`gen_image_${category}`) || null;
-    const footerText   = getSetting(`footer_${category}`) || `${botName.toUpperCase()}⭐`;
-
-    const publicEmbed = new EmbedBuilder()
-      .setColor(COLORS.GEN)
-      .setTitle('🎮 Account Generated')
-      .setDescription(`🎭 ${interaction.user} generated an account!`)
-      .setFooter({ text: footerText });
-
-    if (imageUrl) publicEmbed.setImage(imageUrl);
 
     if (genChannelId) {
       const genChannel = interaction.guild?.channels.cache.get(genChannelId);
       if (genChannel?.isTextBased()) {
-        await genChannel.send({ embeds: [publicEmbed] }).catch(() => {});
+        await genChannel.send('⏳ Generating...').catch(() => {});
       }
     }
 
