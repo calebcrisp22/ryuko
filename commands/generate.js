@@ -66,7 +66,8 @@ module.exports = {
       }
     }
 
-    await interaction.editReply({
+    await interaction.followUp({
+      ephemeral: true,
       embeds: [
         new EmbedBuilder()
           .setColor(COLORS.GEN)
@@ -93,7 +94,8 @@ module.exports = {
     // Simulate processing time before revealing account details
     await new Promise(resolve => setTimeout(resolve, 10000));
 
-    await interaction.editReply({
+    await interaction.followUp({
+      ephemeral: true,
       embeds: [
         new EmbedBuilder()
           .setColor(COLORS.GEN)
