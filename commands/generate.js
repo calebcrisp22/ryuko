@@ -66,14 +66,15 @@ module.exports = {
       }
     }
 
-    await interaction.followUp({
-      ephemeral: true,
-      embeds: [
-        new EmbedBuilder()
-          .setColor(COLORS.GEN)
-          .setDescription('⏳ Adding account to API...'),
-      ],
-    });
+    try {
+      await interaction.user.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(COLORS.GEN)
+            .setDescription('⏳ Adding account to API...'),
+        ],
+      });
+    } catch {}
 
     // Claim account
     const acc = claimAccount(category);
@@ -94,14 +95,15 @@ module.exports = {
     // Simulate processing time before revealing account details
     await new Promise(resolve => setTimeout(resolve, 10000));
 
-    await interaction.followUp({
-      ephemeral: true,
-      embeds: [
-        new EmbedBuilder()
-          .setColor(COLORS.GEN)
-          .setDescription("✅ Here's your account details"),
-      ],
-    });
+    try {
+      await interaction.user.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(COLORS.GEN)
+            .setDescription("✅ Here's your account details"),
+        ],
+      });
+    } catch {}
 
     // ── Public embed in gen channel ─────────────────────────────────────────
     const genChannelId = getSetting('gen_channel');
