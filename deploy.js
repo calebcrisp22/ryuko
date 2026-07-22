@@ -13,6 +13,13 @@ if (!TOKEN || !CLIENT_ID) {
   process.exit(1);
 }
 
+if (!GUILD_ID) {
+  console.error('❌ Missing GUILD_ID in .env');
+  console.error('This bot only deploys commands to a single guild to avoid duplicate commands.');
+  console.error('Set GUILD_ID in your .env to the ID of the guild you want to deploy commands to.');
+  process.exit(1);
+}
+
 const commands = [];
 const commandsPath = path.join(__dirname, 'commands');
 
@@ -28,19 +35,10 @@ const rest = new REST().setToken(TOKEN);
 
 (async () => {
   try {
-    if (GUILD_ID) {
-      console.log(`\n🔄 Deploying ${commands.length} slash commands to guild ${GUILD_ID} (instant sync)...`);
-      await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-      console.log(`✅ Successfully deployed ${commands.length} commands to guild ${GUILD_ID}!`);
-      console.log('\nGuild commands update instantly and are perfect for testing.');
-      console.log('Remove GUILD_ID from your .env to deploy globally for production instead.');
-    } else {
-      console.log(`\n🔄 Deploying ${commands.length} slash commands globally...`);
-      await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
-      console.log(`✅ Successfully deployed ${commands.length} commands!`);
-      console.log('\nNote: Global commands may take up to 1 hour to appear everywhere.');
-      console.log('For instant testing, set a GUILD_ID env var to deploy to a single guild instead.');
-    }
+    console.log(`\n🔄 Deploying ${commands.length} slash commands to guild ${GUILD_ID} (instant sync)...`);
+    await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
+    console.log(`✅ Successfully deployed ${commands.length} commands to guild ${GUILD_ID}!`);
+    console.log('\nCommands are only deployed to this guild, so there will be no duplicates.');
   } catch (err) {
     console.error('❌ Deploy failed:', err);
   }
