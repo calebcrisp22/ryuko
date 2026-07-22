@@ -92,16 +92,6 @@ module.exports = {
 
     clearInterval(typingInterval);
 
-    // ── Simple loading indicator in gen channel ─────────────────────────────
-    const genChannelId = getSetting('gen_channel');
-
-    if (genChannelId) {
-      const genChannel = interaction.guild?.channels.cache.get(genChannelId);
-      if (genChannel?.isTextBased()) {
-        await genChannel.send('⏳ Generating `●●●`').catch(() => {});
-      }
-    }
-
     // ── DM embed ────────────────────────────────────────────────────────────
     const creds      = `${acc.email}:${acc.password}`;
     const credsB64   = Buffer.from(creds).toString('base64');
@@ -155,6 +145,33 @@ module.exports = {
       await interaction.user.send({ embeds: [dmEmbed], components: [row] });
     } catch {
       dmSent = false;
+    }
+
+    // ── Announcement in gen channel ─────────────────────────────────────────
+    const genChannelId = getSetting('gen_channel');
+
+    if (genChannelId) {
+      const genChannel = interaction.guild?.channels.cache.get(genChannelId);
+      if (genChannel?.isTextBased()) {
+        const footerText = getSetting('footer_text') || `${botName} • Do NOT share your credentials with anyone`;
+
+        const announceEmbed = new EmbedBuilder()
+          .setColor(COLORS.GEN)
+          .setDescription(`🎮 **${interaction.user.username}** generated a account!`)
+          .setFooter({ text: footerText })
+          .setTimestamp();
+
+        if (dmImageUrl) {
+          try {
+            new URL(dmImageUrl);
+            announceEmbed.setImage(dmImageUrl);
+          } catch (err) {
+            console.error(`[generate] Skipping invalid gen image URL for "${category}":`, err.message);
+          }
+        }
+
+        await genChannel.send({ embeds: [announceEmbed] }).catch(() => {});
+      }
     }
 
     // Reply to user
