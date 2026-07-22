@@ -22,14 +22,26 @@ module.exports = {
       opt.setName('gen_image_premium')
         .setDescription('Banner image URL for premium account announcements')
         .setRequired(false)
+    )
+    .addRoleOption(opt =>
+      opt.setName('free_role')
+        .setDescription('Role required to use /generate free')
+        .setRequired(false)
+    )
+    .addRoleOption(opt =>
+      opt.setName('premium_role')
+        .setDescription('Role required to use /generate premium')
+        .setRequired(false)
     ),
 
   async execute(interaction) {
     const genChannel = interaction.options.getChannel('gen_channel');
     const genImageFree = interaction.options.getString('gen_image_free');
     const genImagePremium = interaction.options.getString('gen_image_premium');
+    const freeRole = interaction.options.getRole('free_role');
+    const premiumRole = interaction.options.getRole('premium_role');
 
-    if (!genChannel && !genImageFree && !genImagePremium) {
+    if (!genChannel && !genImageFree && !genImagePremium && !freeRole && !premiumRole) {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
@@ -55,6 +67,16 @@ module.exports = {
     if (genImagePremium) {
       setSetting('gen_image_premium', genImagePremium);
       updates.push(`**Gen Image (Premium)** set to ${genImagePremium}`);
+    }
+
+    if (freeRole) {
+      setSetting('free_role', freeRole.id);
+      updates.push(`**Free Role** set to ${freeRole}`);
+    }
+
+    if (premiumRole) {
+      setSetting('premium_role', premiumRole.id);
+      updates.push(`**Premium Role** set to ${premiumRole}`);
     }
 
     const embed = new EmbedBuilder()
